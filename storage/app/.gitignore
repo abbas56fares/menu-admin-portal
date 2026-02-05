@@ -1,0 +1,5 @@
+# Ignore all uploads except tracked directories
+*
+!private/
+!public/
+!.gitignore
