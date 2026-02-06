@@ -23,7 +23,6 @@
         "@inertiajs/progress": "^0.2.7",
         "@inertiajs/vue3": "^2.3.13",
         "@vitejs/plugin-vue": "^6.0.4",
-        "inertiajs": "^0.0.0",
         "vue": "^3.5.27"
     }
 }
