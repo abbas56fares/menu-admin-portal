@@ -103,8 +103,7 @@ const onFileChange = (e) => {
 }
 
 const submit = () => {
-  form.post(`/admin/items/${props.item.id}`, {
-    method: 'put',
+  form.put(`/admin/items/${props.item.id}`, {
     forceFormData: true,
   })
 }
