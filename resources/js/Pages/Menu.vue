@@ -60,61 +60,67 @@
 
     <div class="w-full bg-transparent">
       <div class="mx-0 px-0 py-6">
-        <!-- Logo -->
-        <div class="flex justify-center mb-4">
-          <img src="/images/logos/Hillside hotel logo.png" :alt="props.category.name + ' Logo'" class="h-60 md:h-80" />
+        <div v-if="!props.category" class="text-center text-white/80 px-6">
+          Menu is not available yet. Please check back soon.
         </div>
 
-        <!-- Brand buttons -->
-        <div class="flex items-center px-3 justify-center">
-          <div class="bg-black/40 rounded-md flex items-center justify-center gap-3 flex-wrap">
-            <Link preserve-scroll="true"
-              v-for="cat in props.allCategories"
-              :key="cat.id"
-              :href="`/menu/${cat.slug}`"
-              class="type-btn menu-item text-upper text-center rounded text-white font-semibold px-4 py-2 transition"
-              :class="{ 'active border-b-2 border-yellow-500': props.category.slug === cat.slug }"
-            >
-              {{ cat.name.toUpperCase() }}
-            </Link>
+        <template v-else>
+          <!-- Logo -->
+          <div class="flex justify-center mb-4">
+            <img src="/images/logos/Hillside hotel logo.png" :alt="(props.category?.name || 'Menu') + ' Logo'" class="h-60 md:h-80" />
           </div>
-        </div>
 
-        <!-- Types and Subcategories -->
-        <div class="mt-4 bg-black/30 rounded-md px-0 py-2 flex items-center justify-center flex-wrap menu-bar">
-          <button
-            v-for="(typeName, index) in typeNames"
-            :key="index"
-            @click="activeTypeIndex = index; showSubcategories(index)"
-            :class="{ active: activeTypeIndex === index }"
-            class="mx-3 flex flex-col items-center px-3 py-2 text-center rounded menu-item1 type-toggle transition"
-          >
-            <div class="h-6 w-6 mb-1 text-yellow-500">
-              <i v-if="typeName.toLowerCase() === 'food'" class="fa-solid fa-utensils"></i>
-              <i v-else-if="typeName.toLowerCase() === 'beverage'" class="fa-solid fa-wine-glass-empty"></i>
-              <i v-else-if="typeName.toLowerCase() === 'dessert'" class="fa-solid fa-stroopwafel"></i>
-              <i v-else-if="typeName.toLowerCase() === 'pizza'" class="fa-solid fa-pizza-slice"></i>
+          <!-- Brand buttons -->
+          <div class="flex items-center px-3 justify-center">
+            <div class="bg-black/40 rounded-md flex items-center justify-center gap-3 flex-wrap">
+              <Link preserve-scroll="true"
+                v-for="cat in props.allCategories"
+                :key="cat.id"
+                :href="`/menu/${cat.slug}`"
+                class="type-btn menu-item text-upper text-center rounded text-white font-semibold px-4 py-2 transition"
+                :class="{ 'active border-b-2 border-yellow-500': (props.category?.slug || '') === cat.slug }"
+              >
+                {{ cat.name.toUpperCase() }}
+              </Link>
             </div>
-            <div class="text-sm text-white font-medium">{{ typeName.toUpperCase() }}</div>
-          </button>
-
-          <!-- Subcategories -->
-          <div class="w-full flex justify-center mt-3 flex-wrap">
-            <button
-              v-for="sub in visibleSubcategories"
-              :key="sub.id"
-              @click="scrollToSubcategory(sub.id)"
-              class="menu-item1 px-1 py-2 text-white font-medium menu-sep mx-1 sm:px-3 transition"
-            >
-              {{ sub.name.toUpperCase() }}
-            </button>
           </div>
-        </div>
+
+          <!-- Types and Subcategories -->
+          <div class="mt-4 bg-black/30 rounded-md px-0 py-2 flex items-center justify-center flex-wrap menu-bar">
+            <button
+              v-for="(typeName, index) in typeNames"
+              :key="index"
+              @click="activeTypeIndex = index; showSubcategories(index)"
+              :class="{ active: activeTypeIndex === index }"
+              class="mx-3 flex flex-col items-center px-3 py-2 text-center rounded menu-item1 type-toggle transition"
+            >
+              <div class="h-6 w-6 mb-1 text-yellow-500">
+                <i v-if="typeName.toLowerCase() === 'food'" class="fa-solid fa-utensils"></i>
+                <i v-else-if="typeName.toLowerCase() === 'beverage'" class="fa-solid fa-wine-glass-empty"></i>
+                <i v-else-if="typeName.toLowerCase() === 'dessert'" class="fa-solid fa-stroopwafel"></i>
+                <i v-else-if="typeName.toLowerCase() === 'pizza'" class="fa-solid fa-pizza-slice"></i>
+              </div>
+              <div class="text-sm text-white font-medium">{{ typeName.toUpperCase() }}</div>
+            </button>
+
+            <!-- Subcategories -->
+            <div class="w-full flex justify-center mt-3 flex-wrap">
+              <button
+                v-for="sub in visibleSubcategories"
+                :key="sub.id"
+                @click="scrollToSubcategory(sub.id)"
+                class="menu-item1 px-1 py-2 text-white font-medium menu-sep mx-1 sm:px-3 transition"
+              >
+                {{ sub.name.toUpperCase() }}
+              </button>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- Items -->
-    <div class="w-full max-w-6xl mx-auto px-6 py-6">
+    <div v-if="props.category" class="w-full max-w-6xl mx-auto px-6 py-6">
       <template v-for="(typeName, typeIndex) in typeNames" :key="typeIndex">
         <div v-show="activeTypeIndex === typeIndex">
           <template v-for="subcategory in typeSubcategories[typeName]" :key="subcategory.id">
