@@ -65,6 +65,15 @@
         </div>
 
         <template v-else>
+          <div class="flex justify-center mb-4 px-4">
+            <input
+              v-model="searchTerm"
+              type="text"
+              placeholder="Search menu..."
+              class="w-full max-w-xl bg-black/40 border border-white/20 rounded px-4 py-2 text-white placeholder-white/60"
+            />
+          </div>
+
           <!-- Logo -->
           <div class="flex justify-center mb-4">
             <img src="/images/logos/Hillside hotel logo.png" :alt="(props.category?.name || 'Menu') + ' Logo'" class="h-60 md:h-80" />
@@ -121,9 +130,12 @@
 
     <!-- Items -->
     <div v-if="props.category" class="w-full max-w-6xl mx-auto px-6 py-6">
+      <div v-if="searchTerm && !typeNames.length" class="text-center text-white/70 py-6">
+        No items match your search.
+      </div>
       <template v-for="(typeName, typeIndex) in typeNames" :key="typeIndex">
         <div v-show="activeTypeIndex === typeIndex">
-          <template v-for="subcategory in typeSubcategories[typeName]" :key="subcategory.id">
+          <template v-for="subcategory in displayTypeSubcategories[typeName]" :key="subcategory.id">
             <h3 :id="`sub-${subcategory.id}`" class="text-xl text-yellow-500 font-semibold mb-3 mt-6">
               {{ subcategory.name }}
             </h3>
@@ -199,7 +211,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 
 defineOptions({
@@ -217,6 +229,7 @@ const activeTypeIndex = ref(0)
 const selectedItem = ref(null)
 const cartOpen = ref(false)
 const cartItems = ref([])
+const searchTerm = ref('')
 
 const orderForm = useForm({
   customer_name: '',
@@ -244,11 +257,39 @@ const typeSubcategories = computed(() => {
   return grouped
 })
 
-const typeNames = computed(() => Object.keys(typeSubcategories.value))
+const displayTypeSubcategories = computed(() => {
+  if (!searchTerm.value) {
+    return typeSubcategories.value
+  }
+
+  const term = searchTerm.value.toLowerCase().trim()
+  const filtered = {}
+
+  Object.entries(typeSubcategories.value).forEach(([typeName, subcats]) => {
+    const nextSubcats = subcats
+      .map((sub) => {
+        const items = (sub.items || []).filter((item) => {
+          const name = String(item.name || '').toLowerCase()
+          const desc = String(item.description || '').toLowerCase()
+          return name.includes(term) || desc.includes(term)
+        })
+        return { ...sub, items }
+      })
+      .filter((sub) => sub.items.length > 0)
+
+    if (nextSubcats.length > 0) {
+      filtered[typeName] = nextSubcats
+    }
+  })
+
+  return filtered
+})
+
+const typeNames = computed(() => Object.keys(displayTypeSubcategories.value))
 
 const visibleSubcategories = computed(() => {
   const typeName = typeNames.value[activeTypeIndex.value]
-  return typeSubcategories.value[typeName] || []
+  return displayTypeSubcategories.value[typeName] || []
 })
 
 const getImagePath = (imagePath) => {
@@ -316,6 +357,10 @@ const closeItemModal = () => {
 const showSubcategories = (index) => {
   activeTypeIndex.value = index
 }
+
+watch(searchTerm, () => {
+  activeTypeIndex.value = 0
+})
 
 const scrollToSubcategory = (subId) => {
   const element = document.getElementById(`sub-${subId}`)
