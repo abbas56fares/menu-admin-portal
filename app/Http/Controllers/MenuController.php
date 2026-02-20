@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
-use App\Models\Type;
-use Illuminate\Support\Facades\Cache;
+use App\Services\StaticDataService;
 use Inertia\Inertia;
 
 class MenuController extends Controller
 {
     public function index($brand = null)
     {
-        $allCategories = Category::all();
+        $allCategories = StaticDataService::getCategories();
         if ($allCategories->isEmpty()) {
             return Inertia::render('Menu', [
                 'brand' => null,
@@ -26,61 +24,35 @@ class MenuController extends Controller
             $brand = $defaultCategory->slug;
         }
 
-        // Cache menu data for 1 hour to reduce database queries
-        $cacheKey = "menu_data_{$brand}";
+        // Get category data with relationships
+        $category = StaticDataService::getCategoryBySlug($brand, ['subcategories']);
         
-        $data = Cache::remember($cacheKey, 3600, function () use ($brand, $defaultCategory) {
-            // find the brand with optimized eager loading
-            $category = Category::where('slug', $brand)
-                ->with(['subcategories' => function($query) {
-                    $query->with(['type', 'items' => function($itemQuery) {
-                        $itemQuery->where('is_active', true)
-                                 ->select('id', 'name', 'description', 'price', 'currency', 'image', 'subcategory_id', 'category_id');
-                    }]);
-                }])
-                ->first();
+        if (! $category && $defaultCategory) {
+            $category = StaticDataService::getCategoryBySlug($defaultCategory->slug, ['subcategories']);
+        }
 
-            if (! $category && $defaultCategory) {
-                $category = Category::whereKey($defaultCategory->id)
-                    ->with(['subcategories' => function($query) {
-                        $query->with(['type', 'items' => function($itemQuery) {
-                            $itemQuery->where('is_active', true)
-                                     ->select('id', 'name', 'description', 'price', 'currency', 'image', 'subcategory_id', 'category_id');
-                        }]);
-                    }])
-                    ->first();
-            }
-
-            if (! $category) {
-                return null;
-            }
-
+        if ($category) {
+            // Load subcategories with their type and items
+            $brandSubcats = StaticDataService::getSubcategoriesByCategory($category->id, ['type', 'items']);
+            
             // We want Beverage and Dessert to be shared between brands.
-            // Load subcategories for those types globally and merge them into the category's subcategories
+            // Load subcategories for those types globally and merge them
             $sharedTypeNames = ['Beverage', 'Dessert'];
-            $sharedSubcats = \App\Models\Subcategory::whereHas('type', function($q) use ($sharedTypeNames) {
-                $q->whereIn('name', $sharedTypeNames);
-            })->with(['type', 'items' => function($itemQuery) {
-                $itemQuery->where('is_active', true)
-                         ->select('id', 'name', 'description', 'price', 'currency', 'image', 'subcategory_id', 'category_id');
-            }, 'category'])->get();
-
-            // Build a collection that contains brand-specific subcategories (e.g. Food) plus the shared ones
-            $brandSubcats = $category->subcategories;
-            // remove any subcategories from brandSubcats that belong to shared types to avoid duplicates
+            $sharedSubcats = StaticDataService::getSubcategoriesByTypeNames($sharedTypeNames, ['type', 'items', 'category']);
+            
+            // Remove any subcategories from brandSubcats that belong to shared types to avoid duplicates
             $brandSubcats = $brandSubcats->reject(function($s) use ($sharedTypeNames) {
                 return in_array($s->type->name, $sharedTypeNames);
             });
-
-            $mergedSubcats = $brandSubcats->concat($sharedSubcats->values());
-
-            // replace the category's subcategories with merged list for the view
-            $category->setRelation('subcategories', $mergedSubcats);
             
-            return $category;
-        });
+            // Merge brand-specific and shared subcategories
+            $mergedSubcats = $brandSubcats->concat($sharedSubcats->values());
+            
+            // Update the category's subcategories
+            $category->subcategories = $mergedSubcats;
+        }
 
-        if (! $data) {
+        if (! $category) {
             return Inertia::render('Menu', [
                 'brand' => $brand,
                 'category' => null,
@@ -91,9 +63,9 @@ class MenuController extends Controller
 
         return Inertia::render('Menu', [
             'brand' => $brand,
-            'category' => $data,
+            'category' => $category,
             'allCategories' => $allCategories,
-            'types' => Type::orderBy('name')->get(['id', 'name']),
+            'types' => StaticDataService::getTypes(),
         ]);
     }
 }

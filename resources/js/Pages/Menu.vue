@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center text-white">
+  <div
+    class="min-h-screen flex flex-col items-center text-white"
+    :style="{ backgroundImage: 'transparent', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }"
+  >
     <!-- Scroll to top button -->
     <div class="fixed bottom-5 right-5 opacity-60 flex justify-end p-4 z-10">
       <button @click="scrollToTop" class="bg-yellow-500 text-black px-4 py-2 rounded hover:bg-yellow-600 transition">
@@ -294,11 +297,12 @@ const visibleSubcategories = computed(() => {
 
 const getImagePath = (imagePath) => {
   if (!imagePath) return '/images/placeholder.png'
-  let path = imagePath.trim().replace(/^(storage\/|public\/)/, '')
-  if (!path.startsWith('items/')) {
-    path = 'items/' + path.replace(/^\/*/, '')
+  let path = String(imagePath).trim().replace(/^\/*/, '')
+  path = path.replace(/^(storage\/|public\/)/, '')
+  if (!path.startsWith('images/')) {
+    path = 'images/' + path.replace(/^\/*/, '')
   }
-  return '/storage/' + path
+  return encodeURI('/' + path)
 }
 
 const addToCart = (item) => {
@@ -401,6 +405,7 @@ const submitOrder = () => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

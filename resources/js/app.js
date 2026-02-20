@@ -3,7 +3,7 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import Layout from './Layouts/Layout.vue';
 
-const appName = window.document.getElementsByTagName('title')[0]?.innerText || 'Laravel';
+const appName = window.document.getElementsByTagName('title')[0]?.innerText || 'HillSide';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

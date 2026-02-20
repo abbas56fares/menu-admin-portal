@@ -76,8 +76,12 @@ class SubcategoryController extends Controller
     }
 
     // AJAX method for item forms
-    public function byCategory(Category $category)
+    public function byCategory($categoryId)
     {
-        return response()->json($category->subcategories()->select('id','name')->get());
+        $subcategories = \App\Services\StaticDataService::getSubcategoriesByCategory($categoryId);
+        $formatted = $subcategories->map(function($sub) {
+            return ['id' => $sub->id, 'name' => $sub->name];
+        });
+        return response()->json($formatted);
     }
 }

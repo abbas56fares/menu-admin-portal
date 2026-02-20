@@ -5,17 +5,6 @@
         <Link href="/" class="text-xl font-bold text-white">
           Chops & Sicilia
         </Link>
-        <div class="flex gap-4">
-          <Link href="/menu" class="text-white hover:text-white/80">Menu</Link>
-          <template v-if="$page.props.auth.user">
-            <Link href="/admin/dashboard" class="text-white hover:text-white/80">Admin Dashboard</Link>
-            <Link href="/logout" method="post" as="button" class="text-white hover:text-white/80">Logout</Link>
-            <span class="text-yellow-500 font-semibold">{{ $page.props.auth.user.name }}</span>
-          </template> 
-          <template v-else>
-            <Link href="/login" class="text-white hover:text-white/80">Login</Link>
-          </template>
-        </div>
       </div>
     </nav>  
 

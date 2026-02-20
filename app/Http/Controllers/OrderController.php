@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Item;
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Services\StaticDataService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -17,57 +14,55 @@ class OrderController extends Controller
             'phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:items,id',
+            'items.*.id' => 'required|integer',
             'items.*.qty' => 'required|integer|min:1',
         ]);
 
+        // Get items from static data instead of database
         $itemsInput = collect($validated['items']);
-        $items = Item::whereIn('id', $itemsInput->pluck('id'))->get()->keyBy('id');
+        $allItems = StaticDataService::getAllItems(true);
+        $items = $allItems->keyBy('id');
 
-        return DB::transaction(function () use ($validated, $itemsInput, $items) {
-            $orderCurrency = 'LBP';
-            $total = 0;
+        // Calculate order total (without actually saving to database)
+        $orderCurrency = 'USD';
+        $total = 0;
+        $orderItems = [];
 
-            $order = Order::create([
-                'customer_name' => $validated['customer_name'] ?? null,
-                'phone' => $validated['phone'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'status' => 'pending',
-                'total' => 0,
-                'currency' => $orderCurrency,
-            ]);
-
-            foreach ($itemsInput as $payload) {
-                $item = $items->get($payload['id']);
-                if (!$item) {
-                    continue;
-                }
-
-                $price = (float) ($item->price ?? 0);
-                $quantity = (int) $payload['qty'];
-                $lineTotal = $price * $quantity;
-                $total += $lineTotal;
-
-                if ($orderCurrency === 'LBP' && !empty($item->currency)) {
-                    $orderCurrency = $item->currency;
-                }
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_id' => $item->id,
-                    'name' => $item->name,
-                    'price' => $price,
-                    'quantity' => $quantity,
-                    'currency' => $item->currency ?? $orderCurrency,
-                ]);
+        foreach ($itemsInput as $payload) {
+            $item = $items->get($payload['id']);
+            if (!$item) {
+                continue;
             }
 
-            $order->update([
-                'total' => $total,
-                'currency' => $orderCurrency,
-            ]);
+            $price = (float) ($item->price ?? 0);
+            $quantity = (int) $payload['qty'];
+            $lineTotal = $price * $quantity;
+            $total += $lineTotal;
 
-            return redirect()->back()->with('success', 'Order placed successfully.');
-        });
+            if (!empty($item->currency)) {
+                $orderCurrency = $item->currency;
+            }
+
+            $orderItems[] = [
+                'name' => $item->name,
+                'price' => $price,
+                'quantity' => $quantity,
+                'currency' => $item->currency ?? $orderCurrency,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        // In static mode, we don't actually save to database
+        // Instead, we could store in session or just return success
+        session()->flash('order_success', [
+            'customer_name' => $validated['customer_name'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'items' => $orderItems,
+            'total' => $total,
+            'currency' => $orderCurrency,
+        ]);
+
+        return redirect()->back()->with('success', 'Order placed successfully! (Static Mode - Not saved to database)');
     }
 }
